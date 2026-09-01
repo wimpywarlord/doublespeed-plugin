@@ -1,0 +1,12 @@
+{
+  "source": "audit funnel design section 9, audit_id determinism",
+  "cases": [
+    { "brand_name": "Acme", "ordinal": 1, "audit_id": "acme-audit-1" },
+    { "brand_name": "Acme", "ordinal": 2, "audit_id": "acme-audit-2" },
+    { "brand_name": "  ACME   Widgets  ", "ordinal": 1, "audit_id": "acme-widgets-audit-1" },
+    { "brand_name": "Acme, Inc.", "ordinal": 1, "audit_id": "acme-inc-audit-1" },
+    { "brand_name": "Acme---Widgets", "ordinal": 3, "audit_id": "acme-widgets-audit-3" },
+    { "brand_name": "@acme_widgets!", "ordinal": 1, "audit_id": "acme-widgets-audit-1" },
+    { "brand_name": "Cafe Beta 2", "ordinal": 12, "audit_id": "cafe-beta-2-audit-12" }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "doublespeed",
+  "version": "0.1.0",
+  "description": "An AI content team for Doublespeed, plus a free public-data social content audit. Audit any brand from public pages with no account, then research, strategy, copy, slideshow and video production, QA, and human-approved publishing on the hosted Doublespeed MCP.",
+  "author": { "name": "Doublespeed", "url": "https://doublespeed.ai" },
+  "repository": "https://github.com/doublespeed-main/doublespeed-plugin",
+  "license": "MIT",
+  "keywords": [
+    "doublespeed",
+    "content",
+    "slideshow",
+    "tiktok",
+    "social",
+    "video",
+    "content audit",
+    "social audit",
+    "content ideas"
+  ]
+}

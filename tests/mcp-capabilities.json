@@ -1,0 +1,24 @@
+{
+  "fetched_from": "https://doublespeed.ai/api/mcp-info",
+  "fetched_on": "2026-09-01",
+  "capabilities": {
+    "tools": [
+      "list_products", "set_product", "get_product", "update_product",
+      "list_accounts", "get_account", "update_account", "list_posts",
+      "list_account_posts", "get_post_metrics", "create_post", "create_posts_bulk",
+      "queue_post", "update_post", "queue_comments", "get_comment_status",
+      "get_research_trending_run", "search_trending_audio", "score_slideshow_copy",
+      "list_models", "generate_image", "generate_images", "generate_video",
+      "check_generation_status", "render_slides", "render_video",
+      "render_video_preview", "generate_voiceover", "generate_captions",
+      "save_editor_project", "list_templates", "create_template", "get_template",
+      "list_style_presets", "get_draft", "patch_draft", "redeem_review_handoff",
+      "upsert_video_draft", "upsert_slideshow_draft", "create_review_link",
+      "browse_media", "create_image_collection", "prepare_media_upload",
+      "commit_media_upload", "wiki_list_pages", "wiki_get_page", "wiki_edit_page",
+      "preview_slides", "preview_video", "compose_video", "Create-Image",
+      "Create-Images", "Design-Slides", "Save-Slideshow", "Open-Template",
+      "Browse-Templates", "Share-Link"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "source": "audit funnel design section 7",
+  "cases": [
+    { "name": "all strong totals the full 100", "bands": { "D1": "strong", "D2": "strong", "D3": "strong", "D4": "strong", "D5": "strong" }, "expected": 100 },
+    { "name": "all partial uses floor halves", "bands": { "D1": "partial", "D2": "partial", "D3": "partial", "D4": "partial", "D5": "partial" }, "expected": 49 },
+    { "name": "all weak scores zero", "bands": { "D1": "weak", "D2": "weak", "D3": "weak", "D4": "weak", "D5": "weak" }, "expected": 0 },
+    { "name": "all not assessed scores zero", "bands": { "D1": "not_assessed", "D2": "not_assessed", "D3": "not_assessed", "D4": "not_assessed", "D5": "not_assessed" }, "expected": 0 },
+    { "name": "mixed bands used by the full coverage fixture", "bands": { "D1": "strong", "D2": "partial", "D3": "strong", "D4": "weak", "D5": "partial" }, "expected": 62 },
+    { "name": "mixed bands used by the multi surface fixture", "bands": { "D1": "strong", "D2": "strong", "D3": "partial", "D4": "partial", "D5": "strong" }, "expected": 82 },
+    { "name": "not assessed and weak are both zero and never merged", "bands": { "D1": "not_assessed", "D2": "strong", "D3": "weak", "D4": "partial", "D5": "strong" }, "expected": 52 }
+  ]
+}
