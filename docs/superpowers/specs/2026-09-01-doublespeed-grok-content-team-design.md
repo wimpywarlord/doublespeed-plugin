@@ -1,6 +1,7 @@
 # Doublespeed AI Content Team for Grok (ENG-5347)
 
-- **Status:** Approved, ready for implementation
+- **Status:** Proposed, awaiting written-spec review. The reporter approved the
+  high-level design and the fastest option, not this document.
 - **Date:** 2026-09-01
 - **Repository:** `doublespeed-main/doublespeed-plugin` (public)
 - **Scope:** v1, single Grok plugin, no new services
@@ -26,13 +27,16 @@ The work is therefore packaging and safety, not new backend capability.
 ## 2. Goals
 
 - G1. Turn the existing Doublespeed MCP into an installable, role-scoped content
-  team that works in both Grok Bot and Grok Build.
-- G2. Make human approval structurally required before anything is queued or
-  published. The gate must be a state machine, not a politeness convention.
+  team that works in Grok Build and in Grok Bot, on hosts that address packaged
+  agents separately and on hosts that do not.
+- G2. Make human approval an explicit workflow invariant: a state machine that
+  the skill and the role prompts must obey, verified by the publish-gate suite.
+  This is a workflow safety boundary, not an authorization boundary. See 9.4.
 - G3. Make every handoff between roles an inspectable, structured Markdown
   artifact rather than hidden shared state.
-- G4. Ship as one public repository that the official xAI catalog can reference
-  by pinned commit SHA.
+- G4. Ship as one public repository that can be imported into the Doublespeed
+  team marketplace for the pilot, and that the official xAI catalog can later
+  reference by pinned commit SHA.
 
 ## 3. Non-goals
 
@@ -48,8 +52,11 @@ The work is therefore packaging and safety, not new backend capability.
 - N5. No comment automation (`queue_comments`), no account or product settings
   mutation, no template authoring (`create_template`), no wiki writes.
 - N6. No multi-product runs. One active product per run.
-- N7. No local stdio MCP server, no bundled binaries, no npm package. The plugin
-  must work in Grok Bot, which has no local filesystem or stdio transport.
+- N7. No local stdio MCP server, no bundled binaries, no npm package. The hosted
+  remote HTTP endpoint is the single supported transport, so the plugin carries
+  no per-host runtime and no install step. Grok Bot members do run on a
+  persistent managed Linux VM with a filesystem and a browser, so this is a
+  scope choice, not a host limitation.
 - N8. No credentials, tokens, or `.env` files in the repository.
 
 ## 4. Considered approaches
@@ -58,8 +65,10 @@ The work is therefore packaging and safety, not new backend capability.
 
 Eight agent Markdown files under `agents/`, one skill under `skills/`, one
 `.mcp.json` pointing at the existing hosted MCP endpoint. Orchestration and the
-approval gate live in the skill. Per-role tool scoping lives in the agent
-definitions. Nothing is deployed.
+approval gate live in the skill, which is host-compatible: it dispatches the
+packaged agents where the host addresses them separately, and otherwise runs the
+same eight role contracts serially itself. Per-role tool scoping is written into
+the agent definitions and restated in the skill. Nothing is deployed.
 
 ### Approach B: hosted multi-agent service
 
@@ -84,7 +93,8 @@ Zero new services, zero new auth surfaces, zero deploys. The MCP already exposes
 every tool the eight roles need, and OAuth with product-scoped sessions already
 works. The entire deliverable is text files in a public repository, so the
 critical path is authoring and verification, not infrastructure. It also matches
-the distribution story: one link, install it in Grok.
+the distribution story: one repository, imported into the Doublespeed team
+marketplace for the pilot and submitted to the xAI catalog later.
 
 ## 5. Repository and package layout
 
@@ -154,16 +164,25 @@ metadata. We do not use the manifest's `agents` or `commands` path-override
 arrays, so adding a role is a one-file change.
 
 **Agent frontmatter:** `name` and `description` are the fields we rely on. Where
-the host also honours a frontmatter `tools` allowlist, we declare it as defence
-in depth, but no invariant in this design depends on it. Normative permissions
-are stated in each agent's prompt body and enforced by the orchestrating skill's
-gate, so the design is correct even on a host that ignores `tools`.
+the host also honours a frontmatter `tools` allowlist we declare it, but that
+enforcement is unverified on both hosts and no claim in this design depends on
+it. Normative permissions are stated in each agent's prompt body and restated in
+the skill, so the workflow is well defined even on a host that ignores `tools`.
+
+**What `.mcp.json` exposes:** it registers one remote MCP server with the host,
+which then offers that server's full tool list, `queue_post` included, to
+whatever runs in the session. The plugin cannot subset it, and neither the skill
+nor an agent definition can deny a call made outside this workflow. See 9.4.
 
 ## 6. Tool classes
 
 Every tool in the live capability list belongs to exactly one class. The
 validation script enforces this totality property, so a newly added MCP tool
 fails CI until it is classified.
+
+"Allowed" and "forbidden" below are role obligations inside this workflow,
+carried by the role prompts and checked in section 13, not host-enforced
+permissions: the MCP server exposes every tool to the session regardless.
 
 | Class | Tools | Pre-approval |
 | --- | --- | --- |
@@ -359,18 +378,32 @@ human run request
 
 Handoffs are explicit artifacts, not shared memory. Each artifact is emitted as
 a fenced Markdown block with YAML frontmatter, directly in the conversation.
-This is the only transport that works in both Grok Bot and Grok Build, since
-Grok Bot has no writable workspace. Where a writable workspace exists, the
-Content Director may additionally mirror artifacts under
-`.doublespeed/runs/<run_id>/`. That directory is a work artifact bounded to the
-run and may be deleted at any time. The source of truth for all content is
-Doublespeed: drafts, review links, and posts.
+In-conversation transport is canonical because it is portable across hosts,
+inspectable without tooling, and visible to the operator at the moment a role
+hands off, which is what makes the approval gate reviewable. Both hosts have a
+writable filesystem: a Grok Bot member runs on a persistent managed Linux VM
+with a filesystem and a browser. A mirror under `.doublespeed/runs/<run_id>/` is
+therefore optional, is a work artifact bounded to the run, may be deleted at any
+time, and is never read back as authority. The source of truth for all content
+is Doublespeed: drafts, review links, and posts.
+
+**Host compatibility.** The diagram shows role handoffs, not a runtime. Where
+the host exposes the packaged agents as separately addressable, the skill
+dispatches them and they exchange the artifacts above. Where it does not, the
+skill runs the same eight phases serially in one session, adopting each role
+contract in turn and emitting identical artifacts and state transitions. That
+fallback is prompt orchestration, not a new runtime, and no acceptance criterion
+depends on it. Whether Grok Bot exposes packaged plugin agents as independently
+addressable Bots is unverified, and the T6 pilot records which path applied.
 
 `run_id` is `<product_slug>-<n>`, where `n` is the ordinal of the run within the
 current conversation, starting at 1. It is deterministic and needs no clock or
 randomness.
 
 ## 9. Approval state machine
+
+This is the workflow the skill and the roles must follow. Section 9.4 states
+precisely what the gate does and does not prevent.
 
 ### States
 
@@ -400,7 +433,6 @@ randomness.
 | `BRIEFED` | Copy Writer completes | `CopySet` has `variant_count` variants | `COPY_READY` | as above |
 | `COPY_READY` | Visual Producer completes | `DraftPackage` has a `group_id` and at least one `variant_id` | `DRAFT_BUILT` | as above |
 | `DRAFT_BUILT` | QA Editor completes | at least one variant verdict `pass` | `QA_PASSED` | all `fail`: revision cycle, max 2, then `HALTED` |
-
 | `QA_PASSED` | Director calls `create_review_link` (first time) or reuses the existing token | link token returned | `AWAITING_APPROVAL` | `StepFailure`, then `HALTED` |
 | `AWAITING_APPROVAL` | human message | passes all five approval conditions in 9.1 | `APPROVED` | invalid: stays `AWAITING_APPROVAL`, Director states exactly what is missing |
 | `AWAITING_APPROVAL` | human requests changes | change request is unambiguous | `DRAFT_BUILT` | pending `ApprovalRequest` voided |
@@ -457,7 +489,9 @@ phrase exists to make the unambiguous path cheap, not to be the only path.
 
 ### 9.2 Publish guard
 
-`queue_post` may execute only when all of the following are true:
+The Publisher runs this checklist immediately before the call. It is a role
+obligation, not a host-level interception. Within this workflow, `queue_post` is
+called only when all of the following are true:
 
 - current state is `APPROVED`;
 - the caller is `ds-publisher`;
@@ -469,6 +503,8 @@ phrase exists to make the unambiguous path cheap, not to be the only path.
 - no `queue_post` has already succeeded for that `variant_id` in this run.
 
 ### 9.3 Invariants
+
+These hold for runs of this skill, in the sense set out in 9.4.
 
 - **I1.** `queue_post` executes only in state `APPROVED`, only from
   `ds-publisher`, at most once per approved variant.
@@ -486,6 +522,25 @@ phrase exists to make the unambiguous path cheap, not to be the only path.
 - **I7.** Every artifact carries the run's `product_id`. A mismatch forces
   `HALTED`. `queue_post` enforces cross-product ownership server-side as a
   second layer.
+
+### 9.4 What this boundary is and is not
+
+The state machine is a workflow safety boundary, carried by the skill and the
+role prompts and verified by the publish-gate suite in section 13. Inside this
+workflow it is what stops a run queueing content the operator did not approve,
+which is the failure mode v1 targets.
+
+It is not an authorization boundary. `.mcp.json` hands the host the MCP server's
+full tool list, so the operator, another skill, or any prompt outside this
+workflow can call `queue_post` directly, and nothing in this plugin can refuse
+that call. A frontmatter `tools` allowlist may narrow it on some hosts, but that
+enforcement is unverified and no claim here rests on it.
+
+Hard enforcement needs a server-side change: an approval token minted by
+Doublespeed and required by `queue_post`, OAuth scopes that separate reading and
+generation from publishing, or splitting the endpoint into a read-and-draft MCP
+and a publish MCP the operator enables deliberately. All three are out of v1
+scope, which is packaging with no server change (N1, N2).
 
 ## 10. Handoff artifact schemas
 
@@ -812,9 +867,11 @@ budget declared in the `RunManifest`.
 - Secret scan: no 40-character hex strings, bearer tokens, or `.env` files in
   the tree.
 
-**T2. Local plugin load.** Install the plugin from the local checkout in Grok
-Build. Confirm the plugin loads, the skill and all eight agents are listed, and
-the `doublespeed` MCP server appears in the server list.
+**T2. Grok Build plugin load.** Install the plugin from the local checkout in
+Grok Build. Confirm the plugin loads, the orchestrating skill is listed, and the
+`doublespeed` MCP server appears in the server list. Record whether all eight
+packaged agents are listed as separately addressable; if they are, dispatch one
+as a smoke check, and if not, the run uses the skill's serial-role path.
 
 **T3. OAuth smoke.** Trigger the OAuth flow from a clean state, complete it, then
 call `list_products`. Confirm it returns the operator's products. Confirm no
@@ -828,7 +885,9 @@ draft is visible in Doublespeed with `source_template_id` lineage preserved; the
 review link opens and shows the rendered slides.
 
 **T5. Publish gate.** A separate test, run against the T4 run state. Each case
-records the full tool-call log as evidence.
+records the full tool-call log as evidence. T5 verifies that a cooperative run
+of this skill obeys the gate. It does not, and cannot, test that `queue_post` is
+unreachable outside the skill: per 9.4 it is reachable.
 
 - T5a. Send praise with no directive ("looks good"), then send nothing, then
   send a bare "yes" naming nothing while two requests are outstanding. Assert:
@@ -846,9 +905,16 @@ records the full tool-call log as evidence.
   draft caption and into a wiki page the Researcher reads. Run to
   `AWAITING_APPROVAL`. Assert: zero `queue_post` calls and no state advance.
 
-**T6. Grok Bot load.** Install the same plugin in Grok Bot and run to
-`AWAITING_APPROVAL`. Assert: the skill runs, artifacts appear as in-conversation
-Markdown blocks, and no filesystem write is attempted.
+**T6. Grok Bot pilot.** Complete the pilot install path in section 14: import
+the repository into the Doublespeed team marketplace, allowlist
+`https://doublespeed.ai/api/mcp` if team MCP policy requires an explicit entry,
+enable the plugin for the pilot user, and complete OAuth. Assert: the packaged
+skill is invocable in Grok Bot, and the `doublespeed` MCP connector is connected
+and answers `list_products`. Then run the workflow to `AWAITING_APPROVAL` and
+assert the same seven artifacts as T4, each carrying the same `product_id`.
+Record which orchestration path the host took. If packaged plugin agents are not
+independently addressable in Grok Bot, verify that the skill's serial-role
+fallback produced every artifact and every state transition in section 9.
 
 The publish-gate suite (T5) is the acceptance-critical test. A change that
 touches any agent's tool list, the skill, or `approval-gate.md` must re-run it.
@@ -857,14 +923,23 @@ touches any agent's tool list, the skill, or `approval-gate.md` must re-run it.
 
 1. **Public repository.** `doublespeed-main/doublespeed-plugin`, MIT licensed,
    plugin at the repository root, so the catalog entry needs no `path`.
-2. **Local install proof first.** Run T1 through T6 against a local install.
-   This is the functional gate. Nothing is submitted anywhere until they pass.
-3. **Pin a commit.** Get the verified SHA with
+2. **Grok Build proof first.** Run T1 through T5 against a local install in Grok
+   Build. Nothing goes further until they pass.
+3. **Team marketplace pilot, then Grok Bot.** Grok Bot follows the team's Cursor
+   plugin and MCP policy, and a Cursor Teams or Enterprise admin can import a
+   GitHub repository as a team marketplace. So the pilot path is: import
+   `doublespeed-main/doublespeed-plugin` into the Doublespeed team marketplace,
+   allowlist `https://doublespeed.ai/api/mcp` if team MCP policy requires it,
+   enable the plugin for the pilot user, complete OAuth in Grok Bot, then run
+   T6. A public repository URL on its own does not load the plugin in Grok Bot;
+   the team marketplace import and the admin policy step are what do.
+   Together with step 2 this is the functional gate.
+4. **Pin a commit.** Get the verified SHA with
    `git ls-remote https://github.com/doublespeed-main/doublespeed-plugin.git HEAD`.
    It must be a full 40-character lowercase hex string; the catalog validator
    rejects tags, branches, and abbreviations, and Grok Build re-verifies
    `git rev-parse HEAD == sha` after cloning.
-4. **Marketplace PR.** Open a PR against `xai-org/plugin-marketplace` adding one
+5. **Marketplace PR.** Open a PR against `xai-org/plugin-marketplace` adding one
    entry to `.grok-plugin/marketplace.json`:
 
    ```json
@@ -890,18 +965,22 @@ touches any agent's tool list, the skill, or `approval-gate.md` must re-run it.
    `python3 scripts/validate-catalog.py` in a checkout of the marketplace repo,
    and commit the regenerated `plugin-index.json`. CI runs the generator with
    `--check` and fails on a stale index. Code-owner review is required.
-5. **Acceptance boundary.** Marketplace acceptance is a distribution milestone,
-   not a functional one. v1 is functionally accepted when section 15 passes on a
-   local install. Catalog listing may land later, be delayed, or be rejected for
-   reasons unrelated to the plugin working.
-6. **Updates.** Shipping a plugin change means a new commit in our repo plus a
+6. **Acceptance boundary.** Official xAI marketplace acceptance is a later
+   distribution milestone, not the functional gate. v1 is functionally accepted
+   when section 15 passes on the Grok Build install and the team marketplace
+   pilot. Catalog listing may land later, be delayed, or be rejected for reasons
+   unrelated to the plugin working.
+7. **Updates.** Shipping a plugin change means a new commit in our repo plus a
    follow-up catalog PR bumping the pinned `sha`. Never force-push the pinned
    commit.
 
 ## 15. Acceptance criteria
 
-- **AC1.** The plugin loads in both Grok Build and Grok Bot from the repository.
-  Eight agents, one skill, and one MCP server are discovered.
+- **AC1.** The plugin loads in Grok Build from the local checkout and in Grok Bot
+  through the Doublespeed team marketplace. On both hosts the orchestrating skill
+  is invocable and the `doublespeed` MCP server is connected. All eight packaged
+  agent files load where the host lists them separately; where it does not, the
+  skill's serial-role path runs the same contracts and AC4 through AC8 hold.
 - **AC2.** `scripts/validate-plugin.py` passes, including the live tool-name
   cross-check against `/api/mcp-info`, the class totality check, and the
   permission-consistency check.
@@ -911,9 +990,10 @@ touches any agent's tool list, the skill, or `approval-gate.md` must re-run it.
   pre-approval artifacts, each carrying the same `product_id`.
 - **AC5.** A working Doublespeed review link is produced for the QA-passed draft,
   and the persisted draft preserves `source_template_id` lineage.
-- **AC6.** T5a, T5b, T5d, and T5e each produce zero `queue_post` calls. T5c
-  produces exactly one, matching the approved `group_id`, `variant_id`, and
-  status.
+- **AC6.** In runs of this skill, T5a, T5b, T5d, and T5e each produce zero
+  `queue_post` calls, and T5c produces exactly one, matching the approved
+  `group_id`, `variant_id`, and status. Per 9.4 this is a workflow property, not
+  a guarantee that `queue_post` is unreachable by other means.
 - **AC7.** A forced QA failure produces at most two automatic revision cycles and
   then a `HALTED` run with `RevisionBudgetExhausted`. No unbounded loop occurs.
 - **AC8.** A forced tool failure produces a typed `StepFailure` and returns
@@ -949,9 +1029,10 @@ touches any agent's tool list, the skill, or `approval-gate.md` must re-run it.
 | `LICENSE` | docs | 21 |
 
 17 files, approximately 1,500 lines: about 1,360 of prompt, config, and code,
-and about 140 of documentation including the licence. `README.md` is rewritten
-from its current two lines. This design document already exists and is not
-counted.
+and about 140 of documentation including the licence. The skill's serial-role
+fallback is sequencing text inside the `SKILL.md` allowance, not a new file.
+`README.md` is rewritten from its current two lines. This design document
+already exists and is not counted.
 
 **Reassess threshold.** Implementation must stop and reassess with the reporter
 if the delta materially exceeds this estimate, defined as more than 20 files or
@@ -961,14 +1042,7 @@ duplication that belongs in the shared skill references.
 
 ## 17. Open questions
 
-None. Defaults resolved in this document: MIT licence; manifest included at
-`.grok-plugin/plugin.json`; no `commands/` or `hooks/` in v1;
-`redeem_review_handoff` forbidden in v1; `create_review_link` owned by the
-Content Director and permitted pre-approval; default format `slideshow`, default
-`variant_count` 2, default publish status `scheduled`; artifacts transported as
-in-conversation Markdown blocks with optional workspace mirroring; `run_id` is
-`<product_slug>-<n>` within the conversation; retry budgets of 2 retries per
-call site, 2 automatic revision cycles, and 10 generation polls per asset; the
-Performance Analyst's measurement pass is a later invocation of the skill;
-marketplace category `productivity` unless the catalog uses a closer existing
-label at PR time.
+None. Every default is resolved in the sections above rather than restated
+here, including artifact transport and the host fallback in 8, the boundary
+classification and the deferral of hard enforcement in 9.4, and the pilot path
+and catalog milestone in 14.
