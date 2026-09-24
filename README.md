@@ -33,7 +33,7 @@ Copy this entire plugin directory into `~/.cursor/plugins/local/doublespeed`. Re
 
 Verify account identity and product access before trying the example creation workflows. Creating media can consume credits. Cursor enterprise policies may restrict local plugin imports or remote MCP access.
 
-Verified on 2026-09-23: the plugin was installed at `~/.cursor/plugins/local/doublespeed`, and Cursor 3.21.18 recognized Doublespeed as a Local plugin with one MCP server. Local installation and catalog discovery were verified: Cursor displayed 63 tools and 9 resources, including `create_content_agent_routine`, and reported the connection as connected. The connected account identity and end-to-end workflows in Cursor have not yet been verified.
+Verified on 2026-09-23 in Cursor 3.21.18: local installation and discovery of 63 tools and 9 resources; `whoami` confirmed a public MCP connection. Reading Acme Demo templates and photos and saving a new slideshow draft succeeded. Draft read-back and review-link creation returned `Access denied` and `Forbidden` under an admin session that did not pass the demo workspace's membership checks. The end-to-end slideshow and video workflows remain unverified in Cursor.
 
 ## Connection and data access
 
