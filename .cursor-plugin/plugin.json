@@ -1,0 +1,16 @@
+{
+  "name": "doublespeed",
+  "displayName": "Doublespeed",
+  "version": "1.0.0",
+  "description": "Create social slideshows and product videos, save editable drafts, and share review links through Doublespeed's public MCP server. Connect with a Doublespeed account using OAuth.",
+  "author": {
+    "name": "Doublespeed",
+    "email": "ts@doublespeed.ai"
+  },
+  "homepage": "https://doublespeed.ai",
+  "repository": "https://github.com/doublespeed-main/doublespeed-plugin",
+  "license": "MIT",
+  "keywords": ["doublespeed", "slideshows", "videos", "content", "mcp"],
+  "logo": "assets/logo.png",
+  "mcpServers": "mcp.json"
+}
